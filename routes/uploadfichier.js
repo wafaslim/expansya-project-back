@@ -109,6 +109,24 @@ router.post("/uploadfichier", upload.single("fichier"), async (req, res) => {
 });
 
 router.put("/saveData/:fileid", async (req, res) => {
+  const fichier = await fileSchema.findById(req.params.fileid);
+
+  const ext = path.extname(fichier.path);
+
+  if (ext == ".csv") {
+    // import csv here
+    console.log("csv");
+    const jsonArrayObj = await csv().fromFile(fichier.path);
+    console.log(jsonArrayObj);
+    console.log(req.body);
+  } else if (ext == ".xls" || ext == ".xlsx") {
+    // import xls here
+    console.log("xls");
+    const jsonArrayObj = await parser.parseXls2Json(fichier.path);
+    console.log(jsonArrayObj);
+    console.log(req.body);
+  }
+
   res.json({ message: "fichier importé avec succés" });
 });
 
