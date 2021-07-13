@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@vitalets/google-translate-api": "^7.0.0",
+    "cors": "^2.8.5",
     "csvtojson": "^2.0.10",
     "express": "^4.17.1",
     "fuzzball": "^1.4.0",

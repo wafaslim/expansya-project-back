@@ -4,8 +4,10 @@ const db = require("./database/connect");
 const insert = require("./database/initscript");
 // import database
 const bodyParser = require("body-parser");
-
+const cors = require("cors");
 const app = express();
+app.use(cors());
+
 const port = 3000;
 const uploadAPI = require("./routes/uploadfichier");
 

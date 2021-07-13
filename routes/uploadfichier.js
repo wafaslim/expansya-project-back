@@ -39,19 +39,20 @@ const upload = multer({
 router.post("/uploadfichier", upload.single("fichier"), async (req, res) => {
   // get model  array
   const matched = await Modele.find({});
+  // console.log("matched", matched);
   var matchedstring = matched.map(element => element.matched);
-  console.log("Model", model);
+  // console.log("Model", model);
   var model = [];
   for (i = 0; i < matchedstring.length; i++) {
     var model = model.concat(matchedstring[i]);
   }
-  console.log(model);
+  // console.log(model);
 
-  console.log(req.file);
+  // console.log(req.file);
   const fichierUp = new fileSchema({
     path: req.file.path,
   });
-  console.log(fichierUp);
+  // console.log(fichierUp);
   await fichierUp.save();
 
   const ext = path.extname(req.file.originalname);
@@ -66,7 +67,7 @@ router.post("/uploadfichier", upload.single("fichier"), async (req, res) => {
   }
   //when parse finished, result will be emitted here.
 
-  console.log("arraysheaders", arrayHeaders);
+  // console.log("arraysheaders", arrayHeaders);
   var matching = [];
   var notmatching = [];
   var similarkeys = [];
@@ -78,27 +79,37 @@ router.post("/uploadfichier", upload.single("fichier"), async (req, res) => {
       notmatching.push(arrayHeaders[i]);
     }
   }
-  console.log("matching", matching);
-  console.log("notmatch", notmatching);
+  // console.log("matching", matching);
+  // console.log("notmatch", notmatching);
 
   for (i = 0; i < notmatching.length; i++) {
     try {
       var trans = await translate(notmatching[i], { to: "en" });
-
-      const fuzz_extract = await fuzz.extract(trans.text, model);
-      console.log("comparaison", fuzz_extract);
-      console.log(i);
+      const fuzz_extract = await fuzz.extract(trans.text, model, {
+        returnObjects: true,
+      });
+      // console.log("comparaison", fuzz_extract);
+      // console.log(i);
       similarkeys.push({
         key: notmatching[i],
         similarkey: fuzz_extract,
       });
-      console.log("similarkeys", similarkeys);
+      // console.log("similarkeys", similarkeys);
     } catch (error) {
       console.log(error);
     }
   }
 
-  res.json({ fichierUp, matching, similarkeys, model });
+  res.json({
+    fichierUp,
+    matching,
+    similarkeys,
+    message: "fichier importé avec succés",
+  });
+});
+
+router.put("/saveData/:fileid", async (req, res) => {
+  res.json({ message: "fichier importé avec succés" });
 });
 
 module.exports = router;
