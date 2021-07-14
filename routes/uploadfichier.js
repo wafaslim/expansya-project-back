@@ -9,6 +9,7 @@ const fuzz = require("fuzzball");
 const translate = require("@vitalets/google-translate-api");
 const parser = require("simple-excel-to-json");
 const Modele = require("../schemas/modele");
+const ImportedData = require("../schemas/importedData");
 
 // Multer Upload Storage
 const storage = multer.diskStorage({
@@ -112,21 +113,64 @@ router.put("/saveData/:fileid", async (req, res) => {
   const fichier = await fileSchema.findById(req.params.fileid);
 
   const ext = path.extname(fichier.path);
-
+  let arrayHeaders = [];
+  let jsonArrayObj;
   if (ext == ".csv") {
-    // import csv here
-    console.log("csv");
-    const jsonArrayObj = await csv().fromFile(fichier.path);
-    console.log(jsonArrayObj);
-    console.log(req.body);
-  } else if (ext == ".xls" || ext == ".xlsx") {
-    // import xls here
-    console.log("xls");
-    const jsonArrayObj = await parser.parseXls2Json(fichier.path);
-    console.log(jsonArrayObj);
-    console.log(req.body);
+    // read csv here
+    jsonArrayObj = await csv().fromFile(fichier.path);
+    arrayHeaders = Object.keys(jsonArrayObj[0]);
+  } else {
+    // read xls here
+    const allSheets = await parser.parseXls2Json(fichier.path);
+    jsonArrayObj = allSheets[0];
+    arrayHeaders = Object.keys(jsonArrayObj[0]);
   }
+  // console.log(jsonArrayObj);
+  // console.log(req.body);
+  // console.log(arrayHeaders);
+  await Promise.all(
+    arrayHeaders.map(async element => {
+      const exist = req.body.notmatchedHeader.find(
+        obj => obj.key.toLocaleLowerCase() == element.toLocaleLowerCase()
+      );
+      // console.log(exist);
+      if (exist == undefined) {
+        // if this element exist in matched
+        const foundModele = await Modele.findOne({
+          matched: element.toLocaleLowerCase(),
+        });
+        if (foundModele) {
+          // 2.0 update this element in all objects
+          jsonArrayObj.map(obj => {
+            obj[foundModele.champ] = obj[element];
+            delete obj[element];
+          });
+        }
+      } else {
+        // if this element exist in notmatched
+        //  1.0 add this element in matched
+        const foundModele = await Modele.findOneAndUpdate(
+          {
+            matched: exist.value.toLocaleLowerCase(),
+          },
+          {
+            $addToSet: { matched: exist.key.toLocaleLowerCase() },
+          }
+        );
+        // console.log(foundModele);
+        if (foundModele) {
+          // 2.0 update this element in all objects
+          jsonArrayObj.map(obj => {
+            obj[foundModele.champ] = obj[exist.key];
+            delete obj[exist.key];
+          });
+        }
+      }
+    })
+  );
 
+  // console.log(jsonArrayObj);
+  await ImportedData.insertMany(jsonArrayObj);
   res.json({ message: "fichier importé avec succés" });
 });
 
